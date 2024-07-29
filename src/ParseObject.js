@@ -323,7 +323,9 @@ class ParseObject {
     if (CoreManager.get('ALLOW_CUSTOM_OBJECT_ID')) {
       if (!this.createdAt) {
         method = 'POST';
-        body.objectId = this.id;
+        if (this.id) {
+          body.objectId = this.id;
+        }
       } else {
         method = 'PUT';
         path += '/' + this.id;
