@@ -2108,6 +2108,70 @@ describe('Parse Object', () => {
     });
   });
 
+  describe('allowCustomObjectId inside cloud', () => {
+    const parseServerConfig = {
+      allowCustomObjectId: true,
+      cloud(CloudParse) {
+        CloudParse.allowCustomObjectId = true;
+        CloudParse.Cloud.define("testFunction", async (req) => {
+          const objectId = req.params.objectId;
+          const object = new CloudParse.Object('TestObject');
+          object.id = objectId;
+          object.set('foo', 'bar');
+          await object.save();
+          return object;
+        }, ({
+          fields: {
+            objectId: {
+              type: String | null,
+            }
+          }
+        }));
+      },
+    }
+
+    it('can save without setting an objectId', async () => {
+      await reconfigureServer(parseServerConfig);
+      const object = await Parse.Cloud.run('testFunction');
+      expect(object.id).toBeDefined();
+    });
+
+    it('fails to save when objectId is empty', async () => {
+      await reconfigureServer(parseServerConfig);
+      const cloudFunction = Parse.Cloud.run('testFunction', { objectId: '' });
+      await expectAsync(cloudFunction).toBeRejectedWith(
+        new Parse.Error(Parse.Error.MISSING_OBJECT_ID, 'objectId must not be empty or null')
+      );
+    });
+
+    it('fails to save when objectId is null', async () => {
+      await reconfigureServer(parseServerConfig);
+      const cloudFunction = Parse.Cloud.run('testFunction', { objectId: null });
+      await expectAsync(cloudFunction).toBeRejectedWith(
+        new Parse.Error(Parse.Error.MISSING_OBJECT_ID, 'objectId must not be empty or null')
+      );
+    });
+
+    it('can save with custom objectId', async () => {
+      await reconfigureServer(parseServerConfig);
+      const customId = `${Date.now()}`;
+
+      const object = await Parse.Cloud.run('testFunction', { objectId: customId });
+      expect(object.id).toBe(customId);
+
+      const query = new Parse.Query('TestObject');
+      const result = await query.get(customId);
+      expect(result.get('foo')).toBe('bar');
+      expect(result.id).toBe(customId);
+
+      result.set('foo', 'baz');
+      await result.save();
+
+      const afterSave = await query.get(customId);
+      expect(afterSave.get('foo')).toBe('baz');
+    });
+  });
+
   describe('allowCustomObjectId saveAll', () => {
     it('can save without setting an objectId', async () => {
       await reconfigureServer({ allowCustomObjectId: true });
