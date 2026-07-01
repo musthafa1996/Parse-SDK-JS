@@ -114,7 +114,7 @@
     "integration": "cross-env TESTING=1 jasmine --config=jasmine.json",
     "docs": "jsdoc -c ./jsdoc-conf.json ./src",
     "madge:circular": "madge ./src --extensions js,ts --circular",
-    "prepare": "husky && npm run build",
+    "prepare": "npm run build",
     "pre-commit": "lint-staged",
     "release_docs": "./release_docs.sh",
     "gulp": "gulp",
